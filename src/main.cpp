@@ -38,12 +38,13 @@ static void reset(void) {
 }
 
 void setup(void) {
-#if defined(DEBUGGING)
-	Serial.begin(115200);
+
+#if defined(DEBUG)
+	Serial.begin(SERIAL_BAUD);
 #endif
 
 	hardware_init(cpu);
-
+	
 	memory.put(h, 0x0000);
 	memory.put(g, 0x0800);
 	memory.put(f, 0x1000);
@@ -56,11 +57,18 @@ void setup(void) {
 	memory.put(display, 0x2400);
 
 	reset();
+
+	// FIXME: SPI init steals our pin
+	pinMode(PIN_BTN_R, INPUT);
+	
+	Serial.print("RESET");
 }
 
 void loop(void) {
-	if (ps2.available()) {
-		unsigned scan = ps2.read2();
+	if (kpd.available()) {
+		Serial.print('*');
+		unsigned scan = kpd.read2();
+		Serial.printf("%x\n", scan);
 		byte key = scan & 0xff;
 		if (is_down(scan))
 			io.down(scan);
@@ -76,7 +84,8 @@ void loop(void) {
 				io.up(key);
 				break;
 			}
-	} else if (!paused && !cpu.halted()) {
+	} else 
+	if (!paused && !cpu.halted()) {
 		cpu.run(1000);
 		vb.tick(millis());
 	}
